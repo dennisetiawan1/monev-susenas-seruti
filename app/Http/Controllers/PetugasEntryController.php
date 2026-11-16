@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Cache;
 use App\Imports\PetugasEntryImport;
 use App\Models\PetugasEntry;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Validation\Rule;
 
 class PetugasEntryController extends Controller
 {
@@ -97,6 +98,36 @@ class PetugasEntryController extends Controller
         return response()->json([
             'success' => true,
             'message' => count($request->ids) . ' data berhasil dihapus'
+        ]);
+    }
+    public function update(Request $request, string $kode)
+    {
+        $petugas = PetugasEntry::where('kode_petugas', $kode)->firstOrFail();
+
+        $request->validate([
+            'nama_petugas' => 'required|string',
+            'email'        => [
+                'required',
+                'email',
+                Rule::unique('petugas_entries', 'email')->ignore($petugas->kode_petugas, 'kode_petugas'),
+            ],
+            'no_hp'        => 'required|string',
+        ], [
+            'nama_petugas.required' => 'Nama petugas wajib diisi.',
+            'email.required'        => 'Email wajib diisi.',
+            'email.email'           => 'Format email tidak valid.',
+            'email.unique'          => 'Email sudah digunakan.',
+            'no_hp.required'        => 'Nomor HP wajib diisi.',
+        ]);
+
+        $petugas->update($request->only('nama_petugas', 'email', 'no_hp'));
+
+        Cache::forget('dashboard_petugas_options');
+        Cache::forget('count_petugas_entry');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Data petugas berhasil diperbarui!'
         ]);
     }
 

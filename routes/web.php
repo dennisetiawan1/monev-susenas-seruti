@@ -56,6 +56,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/data-dsrt/update-inline', [DataDsrtController::class, 'updateInline'])->name('data_dsrt.update_inline');
     Route::put('/petugas-entry/{kode}', [PetugasEntryController::class, 'update'])
     ->name('petugas_entry.update');
+    Route::put('/petugas-lapangan/{kode}', [PetugasLapanganController::class, 'update'])
+    ->name('petugas_lapangan.update');
 
     // Delete Routes
     Route::post('/petugas-lapangan/delete-bulk', [PetugasLapanganController::class, 'deleteBulk'])->name('petugas_lapangan.delete_bulk');

@@ -73,7 +73,7 @@ class PetugasLapanganController extends Controller
             'no_hp'        => $request->no_hp,
             'kode_jabatan' => $kodeJabatan,
             'jabatan'      => $request->jabatan,
-            'status'       => $request->status,
+            'status'       => $request->status === 'Mitra' ? 1 : 2,
         ]);
 
         Cache::forget('dashboard_petugas_options');
@@ -100,6 +100,38 @@ class PetugasLapanganController extends Controller
         return response()->json([
             'success' => true,
             'message' => count($request->ids) . ' data berhasil dihapus'
+        ]);
+    }
+    public function update(Request $request, string $kode)
+    {
+        $petugas = PetugasLapangan::where('kode_petugas', $kode)->firstOrFail();
+
+        $request->validate([
+            'nama_petugas' => 'required|string',
+            'no_hp'        => 'required|string',
+            'jabatan'      => 'required|in:Pencacah (PPL),Pengawas (PML)',
+            'status'       => 'required|in:Mitra,Staf Kabupaten',
+        ], [
+            'nama_petugas.required' => 'Nama petugas wajib diisi.',
+            'no_hp.required'        => 'Nomor HP wajib diisi.',
+            'jabatan.required'      => 'Jabatan wajib diisi.',
+            'status.required'       => 'Status wajib diisi.',
+        ]);
+
+        $petugas->update([
+            'nama_petugas' => $request->nama_petugas,
+            'no_hp'        => $request->no_hp,
+            'jabatan'      => $request->jabatan,
+            'kode_jabatan' => $request->jabatan === 'Pencacah (PPL)' ? 1 : 2,
+            'status' => $request->status === 'Mitra' ? 1 : 2,
+        ]);
+
+        Cache::forget('dashboard_petugas_options');
+        Cache::forget('count_petugas_lapangan');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Data petugas lapangan berhasil diperbarui!'
         ]);
     }
 
