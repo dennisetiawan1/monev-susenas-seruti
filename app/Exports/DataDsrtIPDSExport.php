@@ -22,6 +22,7 @@ class DataDsrtIPDSExport extends DefaultValueBinder implements FromQuery, WithHe
      * This prevents values such as 16/10 from being auto-converted to numbers,
      * while quotePrefix makes Excel display the text without showing the apostrophe.
      */
+    public function __construct(private string $program = 'susenas') {}
     public function bindValue(Cell $cell, $value)
     {
         $column = $cell->getColumn();
@@ -112,6 +113,7 @@ class DataDsrtIPDSExport extends DefaultValueBinder implements FromQuery, WithHe
         // Both columns are stored as strings in the database, so cast them to
         // unsigned integers for numeric sorting without changing their output format.
         return DataDsrt::query()
+            ->forProgram($this->program)
             ->uniqueForExport()
             ->orderByRaw('CAST(nks_sak22 AS UNSIGNED) ASC')
             ->orderByRaw('CAST(nus_ssn AS UNSIGNED) ASC');
@@ -132,7 +134,7 @@ class DataDsrtIPDSExport extends DefaultValueBinder implements FromQuery, WithHe
     public function headings(): array
     {
         return [
-            ['Data Progress Penerimaan Kuesioner Susenas oleh IPDS'],
+            ['Data Progress Penerimaan Kuesioner ' . ucfirst($this->program) . ' oleh IPDS'],
             [
                 'kode prop [2 digit]',
                 'kode kab [2 digit]',

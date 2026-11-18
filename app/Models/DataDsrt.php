@@ -89,4 +89,15 @@ class DataDsrt extends Model
 
         return $query->whereIn($table . '.id', $latestIds);
     }
+
+    public function scopeForProgram($query, ?string $program)
+    {
+        $table = $this->getTable();
+
+        return match ($program) {
+            'susenas' => $query->where($table . '.dsrt_ssn', 1),
+            'seruti'  => $query->where($table . '.F_SERUTI', 1),
+            default   => $query,
+        };
+    }
 }

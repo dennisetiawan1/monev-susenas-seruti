@@ -9,6 +9,46 @@
         var petugasOptions = null;
         var petugasOptionsRequest = null;
         var dataTables = {};
+        var sectionConfig = {
+            lapangan: {
+                type: 'lapangan'
+            },
+            entry: {
+                type: 'entry'
+            },
+            'susenas-dashboard': {
+                type: 'dashboard',
+                prefix: 'susenas',
+                program: 'susenas'
+            },
+            'susenas-dssls': {
+                type: 'dssls',
+                program: 'susenas'
+            },
+            'susenas-dsrt': {
+                type: 'dsrt',
+                prefix: 'susenas',
+                program: 'susenas'
+            },
+            'seruti-dashboard': {
+                type: 'dashboard',
+                prefix: 'seruti',
+                program: 'seruti'
+            },
+            'seruti-dsrt': {
+                type: 'dsrt',
+                prefix: 'seruti',
+                program: 'seruti'
+            }
+        };
+
+        function sel(p, n) {
+            return '#' + p + '-' + n;
+        }
+
+        function eid(p, n) {
+            return p + '-' + n;
+        }
 
         // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -322,9 +362,11 @@
             return $tr;
         }
 
-        function dataTableRow($el, type) {
-            if (!dataTables[type]) return null;
-            var row = dataTables[type].row(hostRow($el));
+        function dataTableRow($el) {
+            var id = $el.closest('table.dataTable').attr('id') || '';
+            var dt = dataTables[id.replace(/^dt-/, '')];
+            if (!dt) return null;
+            var row = dt.row(hostRow($el));
             return row && row.any() ? row : null;
         }
 
@@ -414,16 +456,17 @@
             entry: '#selectAllEntry'
         };
 
-        function reloadTable(type) {
-            if (dataTables[type]) {
-                dataTables[type].ajax.reload(null, false);
-                $(selectAllMap[type]).prop('checked', false);
+        function reloadTable(section) {
+            if (dataTables[section]) {
+                dataTables[section].ajax.reload(null, false);
+                $('#dt-' + section + ' thead input[type="checkbox"]').prop('checked', false);
             }
         }
 
-        function deleteSelected(type) {
+        function deleteSelected(type, section) {
+            section = section || type;
             var ids = [];
-            $('.row-' + type + '-checkbox:checked').each(function() {
+            $('#dt-' + section + ' .row-' + type + '-checkbox:checked').each(function() {
                 ids.push($(this).val());
             });
             if (!ids.length) {
@@ -443,25 +486,29 @@
                 }, function(res) {
                     if (res.success) {
                         Swal.fire('Terhapus!', res.message, 'success');
-                        reloadTable(type);
+                        reloadTable(section);
                     }
                 });
             });
         }
 
-        function deleteAll(type) {
+        function deleteAll(type, section, program) {
+            section = section || type;
+            var label = program ? ' ' + program.charAt(0).toUpperCase() + program.slice(1) : '';
             Swal.fire({
-                title: 'Reset semua data?',
-                text: 'Seluruh data akan dihapus permanen!',
+                title: 'Reset semua data' + label + '?',
+                text: 'Seluruh data' + label + ' akan dihapus permanen!',
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#ef4444',
                 confirmButtonText: 'Ya, Reset Semua!'
             }).then(function(r) {
-                if (r.isConfirmed) $.post(deleteUrlMap[type] + '/delete-all', function(res) {
+                if (r.isConfirmed) $.post(deleteUrlMap[type] + '/delete-all', {
+                    program: program || ''
+                }, function(res) {
                     if (res.success) {
                         Swal.fire('Terhapus!', res.message, 'success');
-                        reloadTable(type);
+                        reloadTable(section);
                     }
                 });
             });
@@ -701,11 +748,10 @@
             return cols;
         }
 
-        function dsrtColumns() {
+        function dsrtColumns(cfg) {
             var cols = [];
             var ipdsReadOnly = isAdminIpds;
 
-            // ── Checkbox: hanya superadmin ──
             if (isSuperAdmin) {
                 cols.push({
                     data: null,
@@ -717,7 +763,6 @@
                     }
                 });
             }
-
             // ── Action button (semua role) ──
             cols.push({
                 data: null,
@@ -876,17 +921,19 @@
             }
 
             // Petugas Susenas & Seruti: superadmin & adminipds
-            if (isSuperAdmin || isAdminIpds) {
+            if ((isSuperAdmin || isAdminIpds) && cfg.program !== 'seruti') {
                 cols.push({
                     data: 'petugas_susenas_nama',
-                    className: 'bg-purple-50/50 dark:bg-purple-950/12 border-b border-purple-200 dark:border-purple-800',
+                    className: 'bg-purple-50/50 border-b border-purple-200',
                     render: function(d, t, row) {
                         return renderPetugasCell(row, 'petugas_susenas', 'dsrt');
                     }
                 });
+            }
+            if ((isSuperAdmin || isAdminIpds) && cfg.program !== 'susenas') {
                 cols.push({
                     data: 'petugas_seruti_nama',
-                    className: 'bg-purple-50/50 dark:bg-purple-950/12 border-b border-purple-200 dark:border-purple-800',
+                    className: 'bg-purple-50/50 border-b border-purple-200',
                     render: function(d, t, row) {
                         return renderPetugasCell(row, 'petugas_seruti', 'dsrt');
                     }
@@ -897,25 +944,88 @@
         }
 
         function columnsFor(section) {
-            if (section === 'dashboard') return []; // No DataTables for dashboard
-            return {
+            var cfg = sectionConfig[section];
+            return ({
                 lapangan: lapanganColumns,
                 entry: entryColumns,
                 dssls: dsslsColumns,
                 dsrt: dsrtColumns
-            } [section]();
+            })[cfg.type](cfg);
         }
 
         // ── Dashboard Chart & Summary Logic ──────────────────────────────────────────
 
         var dashboardCharts = {};
-        var dashboardData = null; // store current api response globally for toggles
+        var dashboardData = {};
+        var filterPopulated = {};
+
+        var dsrtChartTargets = [{
+                code: '00223',
+                name: 'RT 004 DUSUN 02'
+            }, {
+                code: '50148',
+                name: 'RT 002 DUSUN I'
+            },
+            {
+                code: '50150',
+                name: 'RT 004 DUSUN 11'
+            }, {
+                code: '00259',
+                name: 'RT 02 DUSUN I'
+            },
+            {
+                code: '00293',
+                name: 'RT 04 DUSUN 2'
+            }, {
+                code: '00642',
+                name: 'RT 06 DUSUN III'
+            },
+            {
+                code: '00649',
+                name: 'RT 03 DUSUN II'
+            }, {
+                code: '50328',
+                name: 'RT 002 DUSUN 01'
+            },
+            {
+                code: '50343',
+                name: 'RT 05 DUSUN II'
+            }, {
+                code: '00875',
+                name: 'RT 002 DUSUN 001'
+            },
+            {
+                code: '50495',
+                name: 'RT 002 LINGKUNGAN I'
+            }, {
+                code: '01004',
+                name: 'RT 06 DUSUN III'
+            },
+            {
+                code: '50578',
+                name: 'RT 012 LINGKUNGAN III'
+            }, {
+                code: '50549',
+                name: 'RT 005 LINGKUNGAN III'
+            },
+            {
+                code: '01146',
+                name: 'RT 006 DUSUN 3'
+            }
+        ];
+
+        var dsrtChartFilterLabels = {
+            semua: 'Semua',
+            lap: 'Lapangan',
+            pemeriksaan: 'Pemeriksaan',
+            sosial: 'Sosial',
+            ipds: 'IPDS'
+        };
 
         function initChart(canvasId, type, labels, datasets, options = {}) {
             var canvas = document.getElementById(canvasId);
             if (!canvas) return;
 
-            // Clear any previous overlay text/styles
             var container = canvas.parentElement;
             if (container) {
                 var existingText = container.querySelector('.chart-no-data-text');
@@ -926,7 +1036,6 @@
                 dashboardCharts[canvasId].destroy();
             }
 
-            // If no data is available, draw text placeholder instead of empty chart
             var hasData = datasets && datasets.some(function(ds) {
                 return ds.data && ds.data.length > 0 && ds.data.some(function(v) {
                     return Number(v) > 0;
@@ -965,7 +1074,6 @@
                 }
             };
 
-            // Merge options
             var mergedOptions = $.extend(true, {}, defaultOptions, options);
 
             dashboardCharts[canvasId] = new Chart(canvas.getContext('2d'), {
@@ -978,179 +1086,30 @@
             });
         }
 
-        // Populate Kecamatan and dependent Desa dropdowns
-        var filterOptionsPopulated = false;
-
-        function populateFilters(kecDesa) {
-            if (filterOptionsPopulated) return;
-            var $kecSelect = $('#filter-kecamatan');
-            $kecSelect.find('option:not(:first)').remove();
-
-            Object.keys(kecDesa).sort().forEach(function(kec) {
-                $kecSelect.append($('<option>', {
-                    value: kec.trim(),
-                    text: kec.trim()
-                }));
-            });
-
-            filterOptionsPopulated = true;
-
-            // Handle dependent Desa selection
-            $kecSelect.on('change', function() {
-                var selectedKec = $(this).val();
-                var $desaSelect = $('#filter-desa');
-                $desaSelect.find('option:not(:first)').remove();
-
-                if (!selectedKec) {
-                    $desaSelect.prop('disabled', true);
-                    loadDashboardSummary('', '');
-                    return;
-                }
-
-                // Find matching key (accounting for trailing spaces in database data)
-                var matchKey = Object.keys(kecDesa).find(function(k) {
-                    return k.trim() === selectedKec;
-                });
-                if (matchKey && kecDesa[matchKey] && kecDesa[matchKey].length > 0) {
-                    kecDesa[matchKey].forEach(function(desa) {
-                        $desaSelect.append($('<option>', {
-                            value: desa.trim(),
-                            text: desa.trim()
-                        }));
-                    });
-                    $desaSelect.prop('disabled', false);
-                } else {
-                    $desaSelect.prop('disabled', true);
-                }
-
-                loadDashboardSummary(selectedKec, '');
-            });
-
-            $('#filter-desa').on('change', function() {
-                var selectedKec = $('#filter-kecamatan').val();
-                var selectedDesa = $(this).val();
-                loadDashboardSummary(selectedKec, selectedDesa);
-            });
-
-            $('#btn-reset-filter').on('click', function() {
-                $('#filter-kecamatan').val('');
-                var $desaSelect = $('#filter-desa');
-                $desaSelect.find('option:not(:first)').remove();
-                $desaSelect.prop('disabled', true);
-                $('#search-rekap').val('');
-                loadDashboardSummary('', '');
-            });
-        }
-
-        var dsrtChartTargets = [{
-                code: '00223',
-                name: 'RT 004 DUSUN 02'
-            },
-            {
-                code: '50148',
-                name: 'RT 002 DUSUN I'
-            },
-            {
-                code: '50150',
-                name: 'RT 004 DUSUN 11'
-            },
-            {
-                code: '00259',
-                name: 'RT 02 DUSUN I'
-            },
-            {
-                code: '00293',
-                name: 'RT 04 DUSUN 2'
-            },
-            {
-                code: '00642',
-                name: 'RT 06 DUSUN III'
-            },
-            {
-                code: '00649',
-                name: 'RT 03 DUSUN II'
-            },
-            {
-                code: '50328',
-                name: 'RT 002 DUSUN 01'
-            },
-            {
-                code: '50343',
-                name: 'RT 05 DUSUN II'
-            },
-            {
-                code: '00875',
-                name: 'RT 002 DUSUN 001'
-            },
-            {
-                code: '50495',
-                name: 'RT 002 LINGKUNGAN I'
-            },
-            {
-                code: '01004',
-                name: 'RT 06 DUSUN III'
-            },
-            {
-                code: '50578',
-                name: 'RT 012 LINGKUNGAN III'
-            },
-            {
-                code: '50549',
-                name: 'RT 005 LINGKUNGAN III'
-            },
-            {
-                code: '01146',
-                name: 'RT 006 DUSUN 3'
-            }
-        ];
-
-        var dsrtChartFilterLabels = {
-            semua: 'Semua',
-            lap: 'Lapangan',
-            pemeriksaan: 'Pemeriksaan',
-            sosial: 'Sosial',
-            ipds: 'IPDS'
-        };
-
-        function renderDsrtChecklistChart(res) {
-            var selectedType = $('#filter-chart-dsrt').val() || 'lap';
+        function renderDsrtChecklistChart(prefix, res) {
+            var selectedType = $(sel(prefix, 'filter-chart-dsrt')).val() || 'lap';
             var selectedLabel = dsrtChartFilterLabels[selectedType] || 'Lapangan';
             var rows = (res && res.dsrt && Array.isArray(res.dsrt.chart)) ? res.dsrt.chart : [];
             var rowByCode = {};
-
-            rows.forEach(function(row) {
-                rowByCode[String(row.kode).trim()] = row;
+            rows.forEach(function(r) {
+                rowByCode[String(r.kode).trim()] = r;
             });
 
-            var labels = dsrtChartTargets.map(function(target) {
-                return [target.code, target.name];
+            var labels = dsrtChartTargets.map(function(t) {
+                return [t.code, t.name];
+            });
+            var data = dsrtChartTargets.map(function(t) {
+                var r = rowByCode[t.code] || {};
+                return Number(r[selectedType] || 0);
             });
 
-            var data = dsrtChartTargets.map(function(target) {
-                var row = rowByCode[target.code] || {};
-                var lap = Number(row.lap || 0);
-                var pemeriksaan = Number(row.pemeriksaan || 0);
-                var sosial = Number(row.sosial || 0);
-                var ipds = Number(row.ipds || 0);
-
-                if (selectedType === 'lap') return lap;
-                if (selectedType === 'pemeriksaan') return pemeriksaan;
-                if (selectedType === 'sosial') return sosial;
-                if (selectedType === 'ipds') return ipds;
-                return lap + pemeriksaan + sosial + ipds;
-            });
-
-            initChart('chart-dsrt', 'bar', labels, [{
+            initChart(eid(prefix, 'chart-dsrt'), 'bar', labels, [{
                 label: selectedLabel,
                 data: data,
                 backgroundColor: '#3b82f6',
                 borderRadius: 4,
                 maxBarThickness: 42
             }], {
-                interaction: {
-                    mode: 'index',
-                    intersect: false
-                },
                 plugins: {
                     legend: {
                         display: false
@@ -1158,19 +1117,11 @@
                     tooltip: {
                         callbacks: {
                             title: function(items) {
-                                if (!items.length) return '';
-                                var index = items[0].dataIndex;
-                                var target = dsrtChartTargets[index];
-                                return 'NBS/NKS: ' + target.code;
+                                return items.length ? 'NBS/NKS: ' + dsrtChartTargets[items[0].dataIndex].code :
+                                    '';
                             },
-                            beforeBody: function(items) {
-                                if (!items.length) return [];
-                                var target = dsrtChartTargets[items[0].dataIndex];
-                                var row = rowByCode[target.code] || {};
-                                return ['Nama SLS: ' + (row.nama_sls || target.name)];
-                            },
-                            label: function(context) {
-                                return 'Jenis ceklis: ' + selectedLabel + ' | Jumlah: ' + context.parsed.y;
+                            label: function(c) {
+                                return 'Jenis ceklis: ' + selectedLabel + ' | Jumlah: ' + c.parsed.y;
                             }
                         }
                     }
@@ -1181,10 +1132,6 @@
                         ticks: {
                             precision: 0,
                             stepSize: 1
-                        },
-                        grid: {
-                            borderDash: [2, 4],
-                            color: '#e2e8f0'
                         },
                         title: {
                             display: true,
@@ -1201,148 +1148,156 @@
                             maxRotation: 45,
                             font: {
                                 size: 9
-                            },
-                            padding: 6
+                            }
                         }
                     }
                 }
             });
         }
 
-        function loadDashboardSummary(kecamatan = '', desa = '') {
-            var url = '{{ route('dashboard.summary') }}';
-            $.getJSON(url, {
-                kecamatan: kecamatan,
-                desa: desa
-            }).done(function(res) {
-                dashboardData = res;
-
-                // 1. Populate filters once
-                populateFilters(res.kec_desa);
-
-                // Update Summary Cards
-                $('#summary-ppl').text(res.petugas.ppl);
-                $('#summary-pml').text(res.petugas.pml);
-                $('#summary-entry').text(res.petugas.entry);
-                $('#summary-total-petugas').text(res.petugas.total);
-
-                $('#chart-dssls-total').text(res.dssls.total);
-                $('#chart-dsrt-total').text(res.dsrt.total);
-
-                // Update Overall Progress Section
-                $('#dssls-progress-badge').text(res.dssls.progress + '%');
-                $('#dssls-progress-bar').css('width', res.dssls.progress + '%');
-                $('#dssls-completed-count').text(res.dssls.completed);
-                $('#dssls-total-count').text(res.dssls.total);
-
-                $('#dsrt-progress-badge').text(res.dsrt.progress + '%');
-                $('#dsrt-progress-bar').css('width', res.dsrt.progress + '%');
-                $('#dsrt-completed-count').text(res.dsrt.completed);
-                $('#dsrt-total-count').text(res.dsrt.total);
-
-                // 1. Chart DSSLS Progress breakdown (Bar)
-                initChart('chart-dssls', 'bar',
-                    ['Lapangan', 'Sosial', 'IPDS'],
-                    [{
-                        label: 'Selesai Ceklis',
-                        data: [res.dssls.lap, res.dssls.sosial, res.dssls.ipds],
-                        backgroundColor: '#FF8C00',
-                        borderRadius: 4
-                    }], {
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                grid: {
-                                    borderDash: [2, 4],
-                                    color: '#e2e8f0'
-                                }
-                            },
-                            x: {
-                                grid: {
-                                    display: false
-                                }
-                            }
-                        }
-                    }
-                );
-
-                // 1. Chart DSRT: jumlah ceklis per NKS, berdasarkan filter jenis ceklis.
-                renderDsrtChecklistChart(res);
-
-                // 2. Render Rekap Petugas Entry Table
-                var rekapHtml = '';
-                if (res.rekap_entry && res.rekap_entry.length > 0) {
-                    res.rekap_entry.forEach(function(item, idx) {
-                        rekapHtml +=
-                            '<tr class="rekap-row hover:bg-gray-50/50 transition-colors" data-nama="' +
-                            escapeHtml(item.nama.toLowerCase()) + '" data-kode="' + escapeHtml(item.kode
-                                .toLowerCase()) + '">';
-                        rekapHtml +=
-                            '  <td class="py-3.5 px-4 text-xs font-semibold text-gray-600 text-center">' + (
-                                idx + 1) + '</td>';
-                        rekapHtml += '  <td class="py-3.5 px-4 text-xs font-bold text-gray-800">' +
-                            escapeHtml(item.nama) + '</td>';
-                        rekapHtml +=
-                            '  <td class="py-3.5 px-4 text-xs font-semibold text-gray-600 text-center">' +
-                            escapeHtml(item.kode) + '</td>';
-                        rekapHtml +=
-                            '  <td class="py-3.5 px-4 text-xs font-bold text-gray-700 text-center">' + item
-                            .pemutakhiran + '</td>';
-                        rekapHtml +=
-                            '  <td class="py-3.5 px-4 text-xs font-bold text-gray-700 text-center">' + item
-                            .susenas + '</td>';
-                        rekapHtml +=
-                            '  <td class="py-3.5 px-4 text-xs font-bold text-gray-700 text-center">' + item
-                            .seruti + '</td>';
-                        rekapHtml +=
-                            '  <td class="py-3.5 px-4 text-xs font-black text-bps-orange text-center">' +
-                            item.total + '</td>';
-                        rekapHtml += '</tr>';
-                    });
-                } else {
-                    rekapHtml =
-                        '<tr><td colspan="7" class="py-8 text-center text-xs text-gray-400">Tidak ada data petugas entry</td></tr>';
-                }
-                $('#tbody-rekap').html(rekapHtml);
-
-                // Re-apply client-side search filter if any value exists
-                var searchVal = $('#search-rekap').val();
-                if (searchVal) {
-                    $('#search-rekap').trigger('input');
-                }
-
-            }).fail(function() {
-                console.error("Gagal memuat data dashboard.");
+        function populateFilters(prefix, program, kecDesa) {
+            if (filterPopulated[prefix]) return;
+            filterPopulated[prefix] = true;
+            var $kec = $(sel(prefix, 'filter-kecamatan')),
+                $desa = $(sel(prefix, 'filter-desa'));
+            Object.keys(kecDesa).sort().forEach(function(k) {
+                $kec.append($('<option>', {
+                    value: k.trim(),
+                    text: k.trim()
+                }));
             });
+            $kec.on('change', function() {
+                var v = $(this).val();
+                $desa.find('option:not(:first)').remove();
+                if (!v) {
+                    $desa.prop('disabled', true);
+                    loadDashboardSummary(prefix, program, '', '');
+                    return;
+                }
+                var key = Object.keys(kecDesa).find(function(k) {
+                    return k.trim() === v;
+                });
+                var list = (key && kecDesa[key]) || [];
+                list.forEach(function(d) {
+                    $desa.append($('<option>', {
+                        value: d.trim(),
+                        text: d.trim()
+                    }));
+                });
+                $desa.prop('disabled', !list.length);
+                loadDashboardSummary(prefix, program, v, '');
+            });
+            $desa.on('change', function() {
+                loadDashboardSummary(prefix, program, $kec.val(), $(this).val());
+            });
+            $(sel(prefix, 'btn-reset-filter')).on('click', function() {
+                $kec.val('');
+                $desa.find('option:not(:first)').remove();
+                $desa.prop('disabled', true);
+                $(sel(prefix, 'search-rekap')).val('');
+                loadDashboardSummary(prefix, program, '', '');
+            });
+        }
+
+        function loadDashboardSummary(prefix, program, kec, desa) {
+            $.getJSON('{{ route('dashboard.summary') }}', {
+                    program: program || '',
+                    kecamatan: kec || '',
+                    desa: desa || ''
+                })
+                .done(function(res) {
+                    dashboardData[prefix] = res;
+                    populateFilters(prefix, program, res.kec_desa);
+                    var S = function(n) {
+                        return $(sel(prefix, n));
+                    };
+
+                    S('summary-ppl').text(res.petugas.ppl);
+                    S('summary-pml').text(res.petugas.pml);
+                    S('summary-entry').text(res.petugas.entry);
+                    S('summary-total-petugas').text(res.petugas.total);
+
+                    S('chart-dsrt-total').text(res.dsrt.total);
+                    S('dsrt-progress-badge').text(res.dsrt.progress + '%');
+                    S('dsrt-progress-bar').css('width', res.dsrt.progress + '%');
+                    S('dsrt-completed-count').text(res.dsrt.completed);
+                    S('dsrt-total-count').text(res.dsrt.total);
+
+                    if (S('chart-dssls').length) {
+                        S('chart-dssls-total').text(res.dssls.total);
+                        S('dssls-progress-badge').text(res.dssls.progress + '%');
+                        S('dssls-progress-bar').css('width', res.dssls.progress + '%');
+                        S('dssls-completed-count').text(res.dssls.completed);
+                        S('dssls-total-count').text(res.dssls.total);
+                        initChart(eid(prefix, 'chart-dssls'), 'bar', ['Lapangan', 'Sosial', 'IPDS'],
+                            [{
+                                label: 'Selesai Ceklis',
+                                data: [res.dssls.lap, res.dssls.sosial, res.dssls.ipds],
+                                backgroundColor: '#FF8C00',
+                                borderRadius: 4
+                            }], {
+                                scales: {
+                                    y: {
+                                        beginAtZero: true
+                                    },
+                                    x: {
+                                        grid: {
+                                            display: false
+                                        }
+                                    }
+                                }
+                            });
+                    }
+
+                    renderDsrtChecklistChart(prefix, res);
+
+                    var html = '';
+                    if (res.rekap_entry && res.rekap_entry.length) {
+                        res.rekap_entry.forEach(function(it, i) {
+                            html += '<tr class="rekap-row" data-nama="' + escapeHtml(it.nama.toLowerCase()) +
+                                '" data-kode="' + escapeHtml(it.kode.toLowerCase()) + '">' +
+                                '<td class="py-3.5 px-4 text-xs text-center">' + (i + 1) + '</td>' +
+                                '<td class="py-3.5 px-4 text-xs font-bold text-gray-800">' + escapeHtml(it
+                                    .nama) + '</td>' +
+                                '<td class="py-3.5 px-4 text-xs text-center">' + escapeHtml(it.kode) + '</td>' +
+                                '<td class="py-3.5 px-4 text-xs font-bold text-center">' + it.pemutakhiran +
+                                '</td>' +
+                                '<td class="py-3.5 px-4 text-xs font-bold text-center">' + it.susenas +
+                                '</td>' +
+                                '<td class="py-3.5 px-4 text-xs font-bold text-center">' + it.seruti + '</td>' +
+                                '<td class="py-3.5 px-4 text-xs font-black text-bps-orange text-center">' + it
+                                .total + '</td></tr>';
+                        });
+                    } else {
+                        html =
+                            '<tr><td colspan="7" class="py-8 text-center text-xs text-gray-400">Tidak ada data petugas entry</td></tr>';
+                    }
+                    S('tbody-rekap').html(html);
+                    if (S('search-rekap').val()) S('search-rekap').trigger('input');
+                })
+                .fail(function() {
+                    console.error('Gagal memuat data dashboard.');
+                });
         }
 
         // Filter custom DSRT (NBS, NKS, Wilayah).
         // NBS/NKS dibandingkan sebagai STRING supaya 00223 tetap berbeda dari 223.
-        $.fn.dataTable.ext.search.push(function(settings, data, dataIndex, rowData) {
-            if (!settings.nTable || settings.nTable.id !== 'dt-dsrt') return true;
-
-            var nbs = String($('#filter-dsrt-nbs').val() || '').trim().toLowerCase();
-            var nks = String($('#filter-dsrt-nks').val() || '').trim();
-            var wilayah = String($('#filter-dsrt-wilayah').val() || '').trim().toLowerCase();
-
-            if (!nbs && !nks && !wilayah) return true;
-
+        $.fn.dataTable.ext.search.push(function(settings, data, idx, rowData) {
+            var m = /^dt-(\w+)-dsrt$/.exec(settings.nTable.id || '');
+            if (!m) return true;
+            var p = m[1];
+            var nks = String($(sel(p, 'filter-dsrt-nks')).val() || '').trim();
+            var wil = String($(sel(p, 'filter-dsrt-wilayah')).val() || '').trim().toLowerCase();
+            if (!nks && !wil) return true;
             rowData = rowData || {};
-            var rowNbs = String(rowData.kdbs ?? '').trim().toLowerCase();
             var rowNks = String(rowData.nks_sak22 ?? '').trim();
-            var rowWilayah = (
-                String(rowData.nmkec || rowData.kec || '').trim() +
-                ' - ' +
-                String(rowData.nmdesa || rowData.desa || '').trim()
-            ).replace(/^\s*-\s*|\s*-\s*$/g, '').toLowerCase();
-
-            if (nbs && rowNbs.indexOf(nbs) === -1) return false;
+            var rowWil = (String(rowData.nmkec || rowData.kec || '').trim() + ' - ' +
+                    String(rowData.nmdesa || rowData.desa || '').trim()).replace(/^\s*-\s*|\s*-\s*$/g, '')
+                .toLowerCase();
             if (nks && rowNks !== nks) return false;
-            if (wilayah && rowWilayah !== wilayah) return false;
-
+            if (wil && rowWil !== wil) return false;
             return true;
         });
-
         // ── DataTables Init ──────────────────────────────────────────────────────────
 
         $(document).ready(function() {
@@ -1387,82 +1342,80 @@
             };
 
             function initServerTable(section) {
-                if (section === 'dashboard') {
-                    loadDashboardSummary();
+                var cfg = sectionConfig[section];
+                if (!cfg) return;
+                if (cfg.type === 'dashboard') {
+                    loadDashboardSummary(cfg.prefix, cfg.program);
                     return;
                 }
                 if (dataTables[section]) {
-                    dataTables[section].columns.adjust();
+                    if (cfg.program) dataTables[section].ajax.reload(null, false);
+                    else dataTables[section].columns.adjust();
                     return;
                 }
                 $('#tbody-' + section).empty();
+                var ajaxCfg = cfg.program ? {
+                        url: serverEndpoints[cfg.type],
+                        data: function(d) {
+                            d.program = cfg.program;
+                        }
+                    } :
+                    serverEndpoints[cfg.type];
+
                 dataTables[section] = $('#dt-' + section).DataTable($.extend(true, {}, dtConfigs, {
                     processing: true,
                     serverSide: false,
                     deferRender: true,
-                    ajax: serverEndpoints[section],
-                    order: [], // Tidak ada initial sort — index kolom berbeda per role
+                    order: [],
+                    ajax: ajaxCfg,
                     columns: columnsFor(section),
                     initComplete: function() {
-                        var api = this.api();
+                        var api = this.api(),
+                            p = cfg.prefix;
+                        if (cfg.type === 'dsrt') {
+                            $('#dt-' + section + '_filter').addClass('hidden');
 
-                        // DSRT: pindahkan pencarian DataTables ke baris filter custom.
-                        if (section === 'dsrt') {
-                            $('#dt-dsrt_filter').addClass('hidden');
-
-                            // Data wilayah dibuat dari data yang benar-benar ada di tabel.
                             var wilayah = {};
                             api.rows().every(function() {
-                                var row = this.data() || {};
-                                var kec = String(row.nmkec || row.kec || '').trim();
-                                var desa = String(row.nmdesa || row.desa || '').trim();
-                                if (kec || desa) {
-                                    var label = kec && desa ? (kec + ' - ' + desa) : (kec ||
-                                        desa);
-                                    wilayah[label] = true;
-                                }
+                                var r = this.data() || {};
+                                var kec = String(r.nmkec || r.kec || '').trim(),
+                                    desa = String(r.nmdesa || r.desa || '').trim();
+                                if (kec || desa) wilayah[kec && desa ? kec + ' - ' + desa :
+                                    (kec || desa)] = true;
                             });
-
-                            var $wilayah = $('#filter-dsrt-wilayah');
-                            $wilayah.find('option:not(:first)').remove();
+                            var $w = $(sel(p, 'filter-dsrt-wilayah'));
+                            $w.find('option:not(:first)').remove();
                             Object.keys(wilayah).sort(function(a, b) {
-                                return a.localeCompare(b, 'id');
-                            }).forEach(function(label) {
-                                $wilayah.append($('<option>', {
-                                    value: label,
-                                    text: label
-                                }));
-                            });
-
-                            var $customSearch = $('#filter-dsrt-search');
-                            $customSearch.off('.dsrtSearch').on('input.dsrtSearch', function() {
-                                api.search(this.value).draw();
-                            });
-
-                            $('#filter-dsrt-nbs, #filter-dsrt-nks, #filter-dsrt-wilayah')
-                                .off('input.dsrtFilter change.dsrtFilter')
-                                .on('input.dsrtFilter change.dsrtFilter', function() {
-                                    api.draw();
+                                    return a.localeCompare(b, 'id');
+                                })
+                                .forEach(function(l) {
+                                    $w.append($('<option>', {
+                                        value: l,
+                                        text: l
+                                    }));
                                 });
 
-                            $('#reset-filter-dsrt-code').off('click.dsrtFilter').on(
-                                'click.dsrtFilter',
+                            var $search = $(sel(p, 'filter-dsrt-search'));
+                            $search.off('.s').on('input.s', function() {
+                                api.search(this.value).draw();
+                            });
+                            $(sel(p, 'filter-dsrt-nks') + ',' + sel(p, 'filter-dsrt-wilayah'))
+                                .off('change.f').on('change.f', function() {
+                                    api.draw();
+                                });
+                            $(sel(p, 'reset-filter-dsrt-code')).off('click.f').on('click.f',
                                 function() {
-                                    $('#filter-dsrt-nbs').val('');
-                                    $('#filter-dsrt-nks').val('');
-                                    $('#filter-dsrt-wilayah').val('');
-                                    $customSearch.val('');
+                                    $(sel(p, 'filter-dsrt-nks') + ',' + sel(p,
+                                        'filter-dsrt-wilayah')).val('');
+                                    $search.val('');
                                     api.search('').draw();
                                 });
                         }
-
-                        // Inject tombol Hapus/Reset ke toolbar length DataTables
-                        var $actions = $('#dt-actions-' + section);
-                        if ($actions.length) {
-                            $('#dt-' + section + '_length')
-                                .addClass('flex items-center flex-wrap')
-                                .append($actions.removeClass('hidden').css({
-                                    'display': 'inline-flex',
+                        var $a = $('#dt-actions-' + section);
+                        if ($a.length) {
+                            $('#dt-' + section + '_length').addClass('flex items-center flex-wrap')
+                                .append($a.removeClass('hidden').css({
+                                    display: 'inline-flex',
                                     'margin-left': '1.25rem'
                                 }));
                         }
@@ -1472,7 +1425,7 @@
             withPetugasOptions(); // pre-fetch
 
             var hash = window.location.hash.substring(1);
-            var activeSection = '{{ session('active_tab', 'dashboard') }}';
+            var activeSection = '{{ session('active_tab', 'susenas-dashboard') }}';
             var available = $('.sidebar-link').map(function() {
                 return $(this).data('section');
             }).get();
@@ -1735,17 +1688,16 @@
             });
 
             // ── Select all checkboxes ────────────────────────────────────────────────
+            $(document).on('change', '.select-all', function() {
+                var s = $(this).data('section'),
+                    t = $(this).data('type');
+                $('#dt-' + s + ' .row-' + t + '-checkbox').prop('checked', $(this).is(':checked'));
+            });
             $(document).on('change', '#selectAllLapangan', function() {
                 $('.row-lapangan-checkbox').prop('checked', $(this).is(':checked'));
             });
             $(document).on('change', '#selectAllEntry', function() {
                 $('.row-entry-checkbox').prop('checked', $(this).is(':checked'));
-            });
-            $(document).on('change', '#selectAllDssls', function() {
-                $('.row-dssls-checkbox').prop('checked', $(this).is(':checked'));
-            });
-            $(document).on('change', '#selectAllDsrt', function() {
-                $('.row-dsrt-checkbox').prop('checked', $(this).is(':checked'));
             });
 
             // ── Inline petugas update ────────────────────────────────────────────────
@@ -1802,7 +1754,7 @@
                     var timeLabelId = '#lbl-' + field.replace('ceklis_', '') + '-' + type + '-' +
                         id;
                     var timestamp = res.timestamp || '';
-                    $(timeLabelId).text(timestamp);
+                    $cb.siblings('span').text(timestamp);
                     if (row) {
                         var rd = row.data();
                         rd[field] = Boolean(isChecked);
@@ -1817,33 +1769,28 @@
             });
 
             // ── Search Rekap Petugas Entry ──
-            $(document).on('input', '#search-rekap', function() {
-                var val = $(this).val().toLowerCase().trim();
-                var visibleRows = 0;
-                var totalRows = 0;
-
-                $('#tbody-rekap tr').each(function() {
-                    var $row = $(this);
-                    if ($row.hasClass('no-data-row')) {
-                        $row.remove();
-                        return;
-                    }
-                    totalRows++;
-                    var nama = $row.data('nama') || '';
-                    var kode = $row.data('kode') || '';
-                    if (nama.indexOf(val) > -1 || kode.indexOf(val) > -1) {
-                        $row.show();
-                        visibleRows++;
-                    } else {
-                        $row.hide();
-                    }
+            $(document).on('input', '[id$="-search-rekap"]', function() {
+                var prefix = this.id.replace('-search-rekap', '');
+                var val = $(this).val().toLowerCase().trim(),
+                    visible = 0,
+                    total = 0;
+                var $tb = $(sel(prefix, 'tbody-rekap'));
+                $tb.find('.no-data-row').remove();
+                $tb.find('tr.rekap-row').each(function() {
+                    total++;
+                    var ok = ($(this).data('nama') || '').indexOf(val) > -1 || ($(this).data(
+                        'kode') || '').indexOf(val) > -1;
+                    $(this).toggle(ok);
+                    if (ok) visible++;
                 });
+                if (!visible && total) $tb.append(
+                    '<tr class="no-data-row"><td colspan="7" class="py-8 text-center text-xs text-gray-400">Tidak ada petugas yang cocok</td></tr>'
+                );
+            });
 
-                if (visibleRows === 0 && totalRows > 0) {
-                    $('#tbody-rekap').append(
-                        '<tr class="no-data-row"><td colspan="7" class="py-8 text-center text-xs text-gray-400">Tidak ada petugas yang cocok dengan pencarian</td></tr>'
-                    );
-                }
+            $(document).on('change', '[id$="-filter-chart-dsrt"]', function() {
+                var prefix = this.id.replace('-filter-chart-dsrt', '');
+                if (dashboardData[prefix]) renderDsrtChecklistChart(prefix, dashboardData[prefix]);
             });
 
             // ── AJAX Submit for Add Petugas Lapangan ──
@@ -2063,60 +2010,33 @@
         });
 
         // ── DSRT Export Dropdown ──
-        // Pindahkan menu ke <body> agar lepas dari SEMUA stacking context (glass + DataTables)
-        (function() {
-            var $menu = $('#dsrt-export-menu');
-            if ($menu.length) {
-                $('body').append($menu.detach());
-            }
-        })();
 
-        function positionDsrtMenu() {
-            var btn = document.getElementById('dsrt-export-btn');
-            if (!btn) return;
-            var rect = btn.getBoundingClientRect();
-            var menuW = 240;
-            var left = rect.right - menuW;
-            if (left < 8) left = 8;
-            $('#dsrt-export-menu').css({
-                top: (rect.bottom + 6) + 'px',
-                left: left + 'px'
-            });
-        }
-
-        window.toggleDsrtExportDropdown = function(event) {
-            event.stopPropagation();
-            var $menu = $('#dsrt-export-menu');
-            var $chevron = $('#dsrt-export-chevron');
-            if ($menu.hasClass('hidden')) {
-                positionDsrtMenu();
-                $menu.removeClass('hidden');
-                $chevron.addClass('rotate-180');
-            } else {
-                $menu.addClass('hidden');
-                $chevron.removeClass('rotate-180');
-            }
+        window.exportRekapPetugas = function(prefix) {
+            var kec = $(sel(prefix, 'filter-kecamatan')).val() || '';
+            var desa = $(sel(prefix, 'filter-desa')).val() || '';
+            window.location.href = '{{ route('dashboard.export_rekap') }}?kecamatan=' + encodeURIComponent(kec) +
+                '&desa=' + encodeURIComponent(desa);
         };
+        $(document).on('click', '.export-dropdown-btn', function(e) {
+            e.stopPropagation();
+            var $dd = $(this).closest('.export-dropdown');
+            var $menu = $dd.find('.export-dropdown-menu');
+            var willOpen = $menu.hasClass('hidden');
+
+            $('.export-dropdown-menu').addClass('hidden');
+            $('.export-chevron').removeClass('rotate-180');
+
+            if (willOpen) {
+                $menu.removeClass('hidden');
+                $dd.find('.export-chevron').addClass('rotate-180');
+            }
+        });
 
         $(document).on('click', function(e) {
-            if (!$(e.target).closest('#dsrt-export-wrapper, #dsrt-export-menu').length) {
-                $('#dsrt-export-menu').addClass('hidden');
-                $('#dsrt-export-chevron').removeClass('rotate-180');
+            if (!$(e.target).closest('.export-dropdown').length) {
+                $('.export-dropdown-menu').addClass('hidden');
+                $('.export-chevron').removeClass('rotate-180');
             }
         });
-
-        $(window).on('scroll resize', function() {
-            if (!$('#dsrt-export-menu').hasClass('hidden')) {
-                positionDsrtMenu();
-            }
-        });
-
-        window.exportRekapPetugas = function() {
-            var kec = $('#filter-kecamatan').val() || '';
-            var desa = $('#filter-desa').val() || '';
-            var url = '{{ route('dashboard.export_rekap') }}?kecamatan=' + encodeURIComponent(kec) + '&desa=' +
-                encodeURIComponent(desa);
-            window.location.href = url;
-        };
     </script>
 @endpush

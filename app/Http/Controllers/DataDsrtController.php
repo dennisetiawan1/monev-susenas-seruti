@@ -20,14 +20,19 @@ class DataDsrtController extends Controller
         }
 
         $request->validate([
-            'file_excel' => 'required|mimes:xlsx,xls,csv'
+            'file_excel' => 'required|mimes:xlsx,xls,csv',
+            'program'    => 'nullable|in:susenas,seruti',
         ]);
 
-        Excel::import(new DataDsrtImport, $request->file('file_excel'));
+        $program = $request->input('program', 'susenas');
+
+        Excel::import(new DataDsrtImport($program), $request->file('file_excel'));
 
         Cache::forget('count_data_dsrt');
 
-        return back()->with('success', 'Data DSRT Berhasil Diimport!')->with('active_tab', 'dsrt');
+        return back()
+            ->with('success', 'Data DSRT ' . ucfirst($program) . ' Berhasil Diimport!')
+            ->with('active_tab', $program . '-dsrt');
     }
 
     public function toggleCeklis(Request $request)
@@ -70,45 +75,53 @@ class DataDsrtController extends Controller
 
         return response()->json(['success' => true, 'timestamp' => $timestamp]);
     }
-
-    public function exportIPDS()
+    private function program(Request $request): string
+    {
+        $p = $request->query('program');
+        return in_array($p, ['susenas', 'seruti'], true) ? $p : 'susenas';
+    }
+    public function exportIPDS(Request $request)
     {
         if (!auth()->user()->isSuperAdmin() && !auth()->user()->isAdminIpds()) {
             abort(403, 'Akses ditolak.');
         }
-        return Excel::download(new DataDsrtIPDSExport, 'Export Data DSRT untuk IPDS.xls');
+        $program = $this->program($request);
+        return Excel::download(
+            new DataDsrtIPDSExport($program),
+            'Export Data DSRT ' . ucfirst($program) . ' untuk IPDS.xls'
+        );
     }
 
-    public function exportSosial()
+    public function exportSosial(Request $request)
     {
         if (!auth()->user()->isSuperAdmin() && !auth()->user()->isAdminSosial()) {
             abort(403, 'Akses ditolak.');
         }
-        return app(DsrtTemplateExportService::class)->download('sosial');
+        return app(DsrtTemplateExportService::class)->download('sosial', $this->program($request));
     }
 
-    public function exportSosialKab()
+    public function exportSosialKab(Request $request)
     {
         if (!auth()->user()->isSuperAdmin() && !auth()->user()->isAdminSosial()) {
             abort(403, 'Akses ditolak.');
         }
-        return app(DsrtTemplateExportService::class)->download('sosial-kab');
+        return app(DsrtTemplateExportService::class)->download('sosial-kab', $this->program($request));
     }
 
-    public function exportLapangan()
+    public function exportLapangan(Request $request)
     {
         if (!auth()->user()->isSuperAdmin() && !auth()->user()->isAdminSosial()) {
             abort(403, 'Akses ditolak.');
         }
-        return app(DsrtTemplateExportService::class)->download('lapangan');
+        return app(DsrtTemplateExportService::class)->download('lapangan', $this->program($request));
     }
 
-    public function exportPemeriksaan()
+    public function exportPemeriksaan(Request $request)
     {
         if (!auth()->user()->isSuperAdmin() && !auth()->user()->isAdminSosial()) {
             abort(403, 'Akses ditolak.');
         }
-        return app(DsrtTemplateExportService::class)->download('pemeriksaan');
+        return app(DsrtTemplateExportService::class)->download('pemeriksaan', $this->program($request));
     }
 
     public function update(Request $request)
@@ -208,16 +221,24 @@ class DataDsrtController extends Controller
         ]);
     }
 
-    public function deleteAll()
+    public function deleteAll(Request $request)
     {
         if (!auth()->user()->isSuperAdmin()) {
             return response()->json(['success' => false, 'message' => 'Akses ditolak. Hanya Super Admin yang dapat me-reset data DSRT.'], 403);
         }
 
-        DataDsrt::truncate();
+        $request->validate([
+            'program' => 'required|in:susenas,seruti',
+        ]);
+
+        $program = $request->input('program');
+        $count = DataDsrt::forProgram($program)->delete();
 
         Cache::forget('count_data_dsrt');
 
-        return response()->json(['success' => true, 'message' => 'Seluruh data berhasil dihapus']);
+        return response()->json([
+            'success' => true,
+            'message' => $count . ' data DSRT ' . ucfirst($program) . ' berhasil dihapus',
+        ]);
     }
 }

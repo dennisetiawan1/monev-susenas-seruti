@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,9 +9,10 @@
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}?v=3">
-    
+
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -75,14 +77,21 @@
         .blob {
             position: absolute;
             border-radius: 50%;
-            filter: blur(100px); /* Increased blur for softer look */
-            opacity: 0.15; /* Much lower opacity for cleanliness */
+            filter: blur(100px);
+            /* Increased blur for softer look */
+            opacity: 0.15;
+            /* Much lower opacity for cleanliness */
             animation: move 25s infinite alternate;
         }
 
         @keyframes move {
-            from { transform: translate(0, 0) scale(1); }
-            to { transform: translate(50px, 50px) scale(1.1); }
+            from {
+                transform: translate(0, 0) scale(1);
+            }
+
+            to {
+                transform: translate(50px, 50px) scale(1.1);
+            }
         }
 
         /* Clean Glassmorphism */
@@ -119,7 +128,7 @@
             transition: all 0.2s ease;
             font-size: 0.875rem;
         }
-        
+
         .dataTables_wrapper .dataTables_filter input:focus {
             background: #fff;
             border-color: #FF8C00;
@@ -137,7 +146,8 @@
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
             border: 1px solid rgba(255, 255, 255, 0.5);
-            border-radius: 9999px; /* Pill shape */
+            border-radius: 9999px;
+            /* Pill shape */
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
             padding: 0.5rem 1rem !important;
             width: auto !important;
@@ -153,7 +163,7 @@
         }
 
         /* Hide DataTables native blue dots loader */
-        .dataTables_wrapper .dataTables_processing > div:not(.custom-loader) {
+        .dataTables_wrapper .dataTables_processing>div:not(.custom-loader) {
             display: none !important;
         }
 
@@ -225,81 +235,124 @@
             width: 8px;
             height: 8px;
         }
+
         ::-webkit-scrollbar-track {
             background: transparent;
         }
+
         ::-webkit-scrollbar-thumb {
             background: rgba(0, 0, 0, 0.1);
             border-radius: 10px;
         }
+
         ::-webkit-scrollbar-thumb:hover {
             background: rgba(0, 0, 0, 0.2);
         }
     </style>
     @stack('styles')
 </head>
+
 <body class="font-jakarta text-gray-700 overflow-x-hidden">
     <!-- Decorative Background Blobs -->
     <div class="bg-blobs">
         <div class="blob bg-bps-orange w-[500px] h-[500px] top-[-10%] left-[-10%]"></div>
-        <div class="blob bg-bps-yellow w-[600px] h-[600px] bottom-[-20%] right-[-10%]" style="animation-delay: -5s;"></div>
+        <div class="blob bg-bps-yellow w-[600px] h-[600px] bottom-[-20%] right-[-10%]" style="animation-delay: -5s;">
+        </div>
         <div class="blob bg-orange-300 w-[400px] h-[400px] top-[30%] right-[20%]" style="animation-delay: -10s;"></div>
-        <div class="blob bg-yellow-200 w-[300px] h-[300px] bottom-[20%] left-[20%]" style="animation-delay: -15s;"></div>
+        <div class="blob bg-yellow-200 w-[300px] h-[300px] bottom-[20%] left-[20%]" style="animation-delay: -15s;">
+        </div>
     </div>
-    
+
     <div class="flex min-h-screen">
         <!-- Sidebar -->
-        <aside id="sidebar" class="fixed left-0 top-0 h-full w-72 glass-dark z-50 transition-all duration-300 transform -translate-x-full lg:translate-x-0">
+        <aside id="sidebar"
+            class="fixed left-0 top-0 h-full w-72 glass-dark z-50 transition-all duration-300 transform -translate-x-full lg:translate-x-0">
             <div class="flex flex-col h-full">
                 <!-- Sidebar Header -->
                 <div class="p-8">
                     <div class="flex items-center space-x-3">
-                        <div class="w-12 h-12 bg-gradient-to-tr from-bps-orange to-bps-yellow rounded-xl flex items-center justify-center shadow-lg">
+                        <div
+                            class="w-12 h-12 bg-gradient-to-tr from-bps-orange to-bps-yellow rounded-xl flex items-center justify-center shadow-lg">
                             <i class="fa-solid fa-chart-line text-white text-2xl"></i>
                         </div>
                         <div>
-                            <h1 class="text-white font-bold text-sm tracking-tight leading-tight">Monev Susenas Seruti 2026</h1>
+                            <h1 class="text-white font-bold text-sm tracking-tight leading-tight">Monev Susenas Seruti
+                                2026</h1>
                             <p class="text-bps-yellow text-[10px] font-semibold uppercase tracking-widest">Ogan Ilir</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- Navigation Links -->
-                @php $activeTab = session('active_tab', 'dashboard'); @endphp
+                @php $activeTab = session('active_tab', 'susenas-dashboard'); @endphp
                 <nav class="flex-1 px-4 space-y-2 py-4">
                     <div class="text-gray-400 text-xs font-bold uppercase tracking-widest px-4 mb-4">Main Menu</div>
-                    
-                    <a href="#" data-section="dashboard" class="sidebar-link {{ $activeTab === 'dashboard' ? 'active' : '' }} flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-300 hover:text-white transition-all duration-300">
-                        <i class="fa-solid fa-chart-pie w-6"></i>
-                        <span class="font-medium">Dashboard Utama</span>
-                    </a>
-                    
-                    <a href="#" data-section="lapangan" class="sidebar-link {{ $activeTab === 'lapangan' ? 'active' : '' }} flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-300 hover:text-white transition-all duration-300">
+
+                    @php
+                        $menuBaru = [
+                            'susenas' => [
+                                'Susenas',
+                                'fa-people-roof',
+                                [
+                                    ['susenas-dashboard', 'fa-chart-pie', 'Dashboard Susenas'],
+                                    ['susenas-dssls', 'fa-map-location-dot', 'DSSLS Susenas'],
+                                    ['susenas-dsrt', 'fa-file-invoice', 'DSRT Susenas'],
+                                ],
+                            ],
+                            'seruti' => [
+                                'Seruti',
+                                'fa-clipboard-list',
+                                [
+                                    ['seruti-dashboard', 'fa-chart-pie', 'Dashboard Seruti'],
+                                    ['seruti-dsrt', 'fa-file-invoice', 'DSRT Seruti'],
+                                ],
+                            ],
+                        ];
+                    @endphp
+
+                    @foreach ($menuBaru as $groupKey => [$groupLabel, $groupIcon, $items])
+                        @php $groupOpen = str_starts_with($activeTab, $groupKey . '-'); @endphp
+                        <div class="menu-group" data-group="{{ $groupKey }}">
+                            <button type="button" onclick="toggleMenuGroup('{{ $groupKey }}')"
+                                class="w-full flex items-center justify-between px-4 py-3 rounded-xl text-gray-300 hover:text-white hover:bg-white/5 transition-all duration-300">
+                                <span class="flex items-center space-x-3">
+                                    <i class="fa-solid {{ $groupIcon }} w-6"></i>
+                                    <span class="font-medium">{{ $groupLabel }}</span>
+                                </span>
+                                <i
+                                    class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200 menu-chevron {{ $groupOpen ? 'rotate-180' : '' }}"></i>
+                            </button>
+                            <div
+                                class="menu-sub {{ $groupOpen ? '' : 'hidden' }} mt-1 ml-4 pl-3 border-l border-white/10 space-y-1">
+                                @foreach ($items as [$key, $icon, $label])
+                                    <a href="#" data-section="{{ $key }}"
+                                        class="sidebar-link {{ $activeTab === $key ? 'active' : '' }} flex items-center space-x-3 px-4 py-2.5 rounded-xl text-sm text-gray-300 hover:text-white transition-all duration-300">
+                                        <i class="fa-solid {{ $icon }} w-5 text-xs"></i>
+                                        <span class="font-medium">{{ $label }}</span>
+                                    </a>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endforeach
+                    <a href="#" data-section="lapangan"
+                        class="sidebar-link {{ $activeTab === 'lapangan' ? 'active' : '' }} flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-300 hover:text-white transition-all duration-300">
                         <i class="fa-solid fa-users w-6"></i>
                         <span class="font-medium">Petugas Lapangan</span>
                     </a>
-                    
-                    <a href="#" data-section="entry" class="sidebar-link {{ $activeTab === 'entry' ? 'active' : '' }} flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-300 hover:text-white transition-all duration-300">
+
+                    <a href="#" data-section="entry"
+                        class="sidebar-link {{ $activeTab === 'entry' ? 'active' : '' }} flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-300 hover:text-white transition-all duration-300">
                         <i class="fa-solid fa-user-pen w-6"></i>
                         <span class="font-medium">Petugas Entry Data</span>
                     </a>
-                    
-                    <a href="#" data-section="dssls" class="sidebar-link {{ $activeTab === 'dssls' ? 'active' : '' }} flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-300 hover:text-white transition-all duration-300">
-                        <i class="fa-solid fa-map-location-dot w-6"></i>
-                        <span class="font-medium">Data DSSLS</span>
-                    </a>
-                    
-                    <a href="#" data-section="dsrt" class="sidebar-link {{ $activeTab === 'dsrt' ? 'active' : '' }} flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-300 hover:text-white transition-all duration-300">
-                        <i class="fa-solid fa-file-invoice w-6"></i>
-                        <span class="font-medium">Data DSRT</span>
-                    </a>
-                    
+
                     <hr class="border-white/10 my-2">
-                    
+
                     <form action="{{ route('logout') }}" method="POST" id="logout-form" class="hidden">
                         @csrf
                     </form>
-                    <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all duration-300">
+                    <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();"
+                        class="flex items-center space-x-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all duration-300">
                         <i class="fa-solid fa-right-from-bracket w-6"></i>
                         <span class="font-medium">Logout</span>
                     </a>
@@ -332,25 +385,36 @@
                     </button>
                     <div>
                         <h2 id="current-section-title" class="text-bps-dark font-bold text-xl">@php
-                            echo ['dashboard'=>'Dashboard Utama','lapangan'=>'Petugas Lapangan','entry'=>'Petugas Entry Data','dssls'=>'Data DSSLS','dsrt'=>'Data DSRT'][$activeTab] ?? 'Dashboard Utama';
+                            echo [
+                                'lapangan' => 'Petugas Lapangan',
+                                'entry' => 'Petugas Entry Data',
+                                'susenas-dashboard' => 'Dashboard Susenas',
+                                'susenas-dssls' => 'DSSLS Susenas',
+                                'susenas-dsrt' => 'DSRT Susenas',
+                                'seruti-dashboard' => 'Dashboard Seruti',
+                                'seruti-dsrt' => 'DSRT Seruti',
+                            ][$activeTab] ?? 'Dashboard Susenas';
                         @endphp</h2>
                         <p class="text-gray-500 text-xs">Monitoring Susenas Seruti 2026</p>
                     </div>
                 </div>
-                
+
                 <div class="flex items-center space-x-6">
-                    <div class="hidden md:flex items-center space-x-2 text-sm font-medium text-gray-600 bg-white/50 px-4 py-2 rounded-full border border-white/50">
+                    <div
+                        class="hidden md:flex items-center space-x-2 text-sm font-medium text-gray-600 bg-white/50 px-4 py-2 rounded-full border border-white/50">
                         <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
                         <span>Sistem Online</span>
                     </div>
-                    
+
                     <!-- Profile Dropdown -->
                     <div class="relative" id="user-profile-dropdown">
-                        <button type="button" onclick="toggleProfileDropdown(event)" class="flex items-center gap-3 focus:outline-none">
+                        <button type="button" onclick="toggleProfileDropdown(event)"
+                            class="flex items-center gap-3 focus:outline-none">
                             <span class="hidden md:block text-right">
-                                <p class="text-bps-dark font-semibold text-sm leading-none mb-1">{{ Auth::user()->name ?? 'Guest' }}</p>
+                                <p class="text-bps-dark font-semibold text-sm leading-none mb-1">
+                                    {{ Auth::user()->name ?? 'Guest' }}</p>
                                 <p class="text-gray-400 text-[10px] uppercase font-bold tracking-wider leading-none">
-                                    @if(Auth::user()->isSuperAdmin())
+                                    @if (Auth::user()->isSuperAdmin())
                                         Super Admin
                                     @elseif(Auth::user()->isAdminSosial())
                                         Admin Sosial
@@ -359,18 +423,23 @@
                                     @endif
                                 </p>
                             </span>
-                            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-bps-orange to-bps-yellow flex items-center justify-center text-white shadow-lg cursor-pointer hover:scale-105 transition-all">
+                            <div
+                                class="w-10 h-10 rounded-xl bg-gradient-to-tr from-bps-orange to-bps-yellow flex items-center justify-center text-white shadow-lg cursor-pointer hover:scale-105 transition-all">
                                 <i class="fa-solid fa-user"></i>
                             </div>
                         </button>
-                        
+
                         <!-- Dropdown Menu -->
-                        <div id="profile-dropdown-menu" class="hidden absolute right-0 mt-2 w-48 glass rounded-xl shadow-xl border border-gray-200/50 py-2 z-50 transition-all scale-95 duration-200">
+                        <div id="profile-dropdown-menu"
+                            class="hidden absolute right-0 mt-2 w-48 glass rounded-xl shadow-xl border border-gray-200/50 py-2 z-50 transition-all scale-95 duration-200">
                             <div class="px-4 py-2 border-b border-gray-200/30">
                                 <p class="text-[10px] text-gray-400">Login sebagai:</p>
-                                <p class="text-xs font-bold text-bps-dark truncate">{{ Auth::user()->username ?? 'Guest' }}</p>
+                                <p class="text-xs font-bold text-bps-dark truncate">
+                                    {{ Auth::user()->username ?? 'Guest' }}</p>
                             </div>
-                            <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" class="flex items-center gap-3 px-4 py-3 text-sm text-red-500 hover:bg-red-50 hover:text-red-600 transition-all font-semibold">
+                            <a href="#"
+                                onclick="event.preventDefault(); document.getElementById('logout-form').submit();"
+                                class="flex items-center gap-3 px-4 py-3 text-sm text-red-500 hover:bg-red-50 hover:text-red-600 transition-all font-semibold">
                                 <i class="fa-solid fa-right-from-bracket"></i>
                                 <span>Keluar Sistem</span>
                             </a>
@@ -388,7 +457,7 @@
 
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-    
+
     <!-- DataTables JS -->
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
@@ -406,6 +475,22 @@
         // Sidebar Toggle
         $('#sidebar-toggle').on('click', function() {
             $('#sidebar').toggleClass('-translate-x-full');
+        });
+
+        function toggleMenuGroup(key) {
+            var $g = $('.menu-group[data-group="' + key + '"]');
+            $g.find('.menu-sub').toggleClass('hidden');
+            $g.find('.menu-chevron').toggleClass('rotate-180');
+        }
+
+        // Saat halaman dimuat ulang dengan #hash, buka grup yang berisi menu aktif
+        $(function() {
+            var h = window.location.hash.substring(1);
+            if (!h) return;
+            var $link = $('.sidebar-link[data-section="' + h + '"]');
+            var $g = $link.closest('.menu-group');
+            $g.find('.menu-sub').removeClass('hidden');
+            $g.find('.menu-chevron').addClass('rotate-180');
         });
 
         // Navigation Logic — lightweight, no fake clicks
@@ -447,25 +532,25 @@
             }
         });
 
-        @if(session('success'))
+        @if (session('success'))
             _Toast.fire({
                 icon: 'success',
                 title: "{{ session('success') }}"
             });
         @endif
 
-        @if(session('error'))
+        @if (session('error'))
             _Toast.fire({
                 icon: 'error',
                 title: "{{ session('error') }}"
             });
         @endif
 
-        @if($errors->any())
+        @if ($errors->any())
             _Toast.fire({
                 icon: 'error',
                 title: 'Validasi Error!',
-                html: '<ul class="text-left text-xs">@foreach($errors->all() as $error)<li>• {{ $error }}</li>@endforeach</ul>'
+                html: '<ul class="text-left text-xs">@foreach ($errors->all() as $error)<li>• {{ $error }}</li>@endforeach</ul>'
             });
         @endif
 
@@ -482,7 +567,8 @@
             }
         });
     </script>
-    
+
     @stack('scripts')
 </body>
+
 </html>

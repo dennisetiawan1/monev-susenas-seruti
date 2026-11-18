@@ -19,7 +19,7 @@ class DsrtTemplateExportService
         'pemeriksaan' => 'template_periksa.xls',
     ];
 
-    public function download(string $type): StreamedResponse
+    public function download(string $type, string $program = 'susenas'): StreamedResponse
     {
         if (!isset(self::TEMPLATES[$type])) {
             abort(404, 'Template export DSRT tidak ditemukan.');
@@ -45,7 +45,7 @@ class DsrtTemplateExportService
         $this->clearDataRows($sheet, 4);
 
         $rowNumber = 4;
-        foreach ($this->query($type)->cursor() as $data) {
+        foreach ($this->query($type, $program)->cursor() as $data) {
             if ($rowNumber > 4) {
                 $this->copyTemplateRowStyle($sheet, 4, $rowNumber, $this->columnCount($type));
             }
@@ -65,6 +65,9 @@ class DsrtTemplateExportService
             ->getAlignment()->setVertical('top');
 
         $filename = $this->outputFilename($type);
+        if ($program === 'seruti') {
+            $filename = str_replace('.xls', ' Seruti.xls', $filename);
+        }
 
         return response()->streamDownload(function () use ($spreadsheet) {
             $writer = IOFactory::createWriter($spreadsheet, 'Xls');
@@ -76,13 +79,15 @@ class DsrtTemplateExportService
         ]);
     }
 
-    private function query(string $type)
+    private function query(string $type, string $program)
     {
+        $base = DataDsrt::query()->forProgram($program);;
+
         return match ($type) {
-            'sosial' => DataDsrt::query()->uniqueForExport()->orderBy('ceklis_sosial', 'desc'),
-            'sosial-kab' => DataDsrt::query()->uniqueForExport()->orderBy('ceklis_sosial', 'desc'),
-            'lapangan' => DataDsrt::query()->uniqueForExport()->orderBy('ceklis_lap', 'desc'),
-            'pemeriksaan' => DataDsrt::query()
+            'sosial' => $base->uniqueForExport()->orderBy('ceklis_sosial', 'desc'),
+            'sosial-kab' => $base->uniqueForExport()->orderBy('ceklis_sosial', 'desc'),
+            'lapangan' => $base->uniqueForExport()->orderBy('ceklis_lap', 'desc'),
+            'pemeriksaan' => $base
                 // Export Pemeriksaan hanya berisi ruta yang sudah dicentang pada
                 // kolom Pemeriksaan di tabel DSRT.
                 ->where('ceklis_pemeriksaan', true)

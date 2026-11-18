@@ -48,15 +48,16 @@ class DashboardController extends Controller
     {
         $kecamatan = $request->input('kecamatan');
         $desa = $request->input('desa');
+        $program = $request->input('program');
 
         // Dynamic list of Kecamatan and Desa (always calculated)
-        $kecDesaList = DataDsrt::select('nmkec', 'nmdesa')
+        $kecDesaList = $this->applyProgram(DataDsrt::select('nmkec', 'nmdesa'), $program)
             ->distinct()
             ->orderBy('nmkec')
             ->orderBy('nmdesa')
             ->get()
             ->groupBy('nmkec')
-            ->map(function($items) {
+            ->map(function ($items) {
                 return $items->pluck('nmdesa')->unique()->values();
             });
 
@@ -66,7 +67,7 @@ class DashboardController extends Controller
 
         // Set up queries
         $dsslsQuery = DataDssls::query();
-        $dsrtQuery = DataDsrt::query();
+        $dsrtQuery = $this->applyProgram(DataDsrt::query(), $program);
 
         if ($kecamatan) {
             $dsslsQuery->whereRaw('TRIM(nama_kecamatan) = ?', [$kecamatan]);
@@ -92,9 +93,21 @@ class DashboardController extends Controller
         // Data chart DSRT per NKS. Sumbernya tetap query DataDsrt yang sama
         // sehingga filter kecamatan/desa dan status ceklis tetap konsisten dengan dashboard.
         $chartDsrtCodes = [
-            '00223', '50148', '50150', '00259', '00293',
-            '00642', '00649', '50328', '50343', '00875',
-            '50495', '01004', '50578', '50549', '01146',
+            '00223',
+            '50148',
+            '50150',
+            '00259',
+            '00293',
+            '00642',
+            '00649',
+            '50328',
+            '50343',
+            '00875',
+            '50495',
+            '01004',
+            '50578',
+            '50549',
+            '01146',
         ];
 
         $chartDsrtRows = (clone $dsrtQuery)
@@ -586,6 +599,8 @@ class DashboardController extends Controller
 
     public function datatableDsrt(Request $request)
     {
+        $program = $request->input('program');
+
         $columns = [
             0 => null,
             1 => null,
@@ -602,13 +617,13 @@ class DashboardController extends Controller
             12 => 'seruti.nama_petugas',
         ];
 
-        $baseQuery = DataDsrt::query()
+        $baseQuery = $this->applyProgram(DataDsrt::query(), $program)
             ->leftJoin('petugas_lapangans as ppl', 'data_dsrts.petugas_ppl', '=', 'ppl.kode_petugas')
             ->leftJoin('petugas_lapangans as pml', 'data_dsrts.petugas_pml', '=', 'pml.kode_petugas')
             ->leftJoin('petugas_entries as susenas', 'data_dsrts.petugas_susenas', '=', 'susenas.kode_petugas')
             ->leftJoin('petugas_entries as seruti', 'data_dsrts.petugas_seruti', '=', 'seruti.kode_petugas');
 
-        $recordsTotal = DataDsrt::count();
+        $recordsTotal = $this->applyProgram(DataDsrt::query(), $program)->count();
         $filteredQuery = clone $baseQuery;
 
         $search = trim((string) $request->input('search.value', ''));
@@ -756,6 +771,14 @@ class DashboardController extends Controller
             'blok_catatan_kor' => $row->blok_catatan_kor,
             'blok_catatan_kp' => $row->blok_catatan_kp,
         ];
+    }
+    private function applyProgram($query, ?string $program)
+    {
+        return match ($program) {
+            'susenas' => $query->where('data_dsrts.dsrt_ssn', 1),
+            'seruti'  => $query->where('data_dsrts.F_SERUTI', 1),
+            default   => $query,
+        };
     }
 
     private function formatDashboardDate($value): ?string

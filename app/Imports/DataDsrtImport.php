@@ -13,6 +13,13 @@ class DataDsrtImport implements
     WithValidation
 {
     protected array $occurrences = [];
+    protected string $program;
+
+    public function __construct(string $program = 'susenas')
+    {
+        $this->program = in_array($program, ['susenas', 'seruti'], true) ? $program : 'susenas';
+    }
+
 
     public function model(array $row)
     {
@@ -22,11 +29,15 @@ class DataDsrtImport implements
 
         // Hanya import baris DSRT yang dsrt_ssn-nya bernilai 1.
         // Baris dengan dsrt_ssn = 0 (atau nilai selain 1) dilewati.
-        $dsrtSsn = $this->value($row, 'dsrt_ssn', null, 0);
-        if ((string) $dsrtSsn !== '1') {
+        // Susenas: hanya dsrt_ssn = 1. Seruti: hanya F_SERUTI = 1.
+        $flag = $this->program === 'seruti'
+            ? $this->value($row, 'f_seruti', 'F_SERUTI', 0)
+            : $this->value($row, 'dsrt_ssn', null, 0);
+
+        if ((string) $flag !== '1') {
             return null;
         }
-
+        
         $key = $this->logicalKey($row);
         $occurrence = $this->occurrences[$key] ?? 0;
         $this->occurrences[$key] = $occurrence + 1;
