@@ -78,6 +78,9 @@
                                 <th class="w-10 text-center"><input type="checkbox" id="selectAllLapangan"
                                         class="w-4 h-4 rounded-md border-gray-300"></th>
                             @endif
+                            @if ($isSuperAdmin || $isAdminSosial)
+                                <th class="text-center">Aksi</th>
+                            @endif
                             <th>Kode</th>
                             <th>Provinsi</th>
                             <th>Kabupaten</th>
@@ -85,9 +88,6 @@
                             <th>No HP</th>
                             <th>Jabatan</th>
                             <th>Status</th>
-                            @if ($isSuperAdmin || $isAdminSosial)
-                                <th class="text-center">Aksi</th>
-                            @endif
                         </tr>
                     </thead>
                     <tbody id="tbody-lapangan">
@@ -163,6 +163,9 @@
                                 <th class="w-10 text-center"><input type="checkbox" id="selectAllEntry"
                                         class="w-4 h-4 rounded-md border-gray-300"></th>
                             @endif
+                            @if ($isSuperAdmin || $isAdminIpds)
+                                <th class="text-center">Aksi</th>
+                            @endif
                             <th>Kode</th>
                             <th>Provinsi</th>
                             <th>Kabupaten</th>
@@ -170,9 +173,6 @@
                             <th>Email</th>
                             <th>No HP</th>
                             <th>Status</th>
-                            @if ($isSuperAdmin || $isAdminIpds)
-                                <th class="text-center">Aksi</th>
-                            @endif
                         </tr>
                     </thead>
                     <tbody id="tbody-entry">

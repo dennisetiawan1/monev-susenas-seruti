@@ -518,15 +518,28 @@
 
         function lapanganColumns() {
             var cols = [];
-            if (isSuperAdmin || isAdminSosial) cols.push({
-                data: null,
-                orderable: false,
-                searchable: false,
-                className: 'text-center',
-                render: function(d, t, row) {
-                    return renderCheckbox(row, 'lapangan');
-                }
-            });
+            if (isSuperAdmin || isAdminSosial) {
+                // 1. Checkbox
+                cols.push({
+                    data: null,
+                    orderable: false,
+                    searchable: false,
+                    className: 'text-center',
+                    render: function(d, t, row) {
+                        return renderCheckbox(row, 'lapangan');
+                    }
+                });
+                // 2. Aksi (tombol edit) tepat setelah checkbox
+                cols.push({
+                    data: null,
+                    orderable: false,
+                    searchable: false,
+                    className: 'text-center',
+                    render: function() {
+                        return renderActionButton('lapangan');
+                    }
+                });
+            }
             cols.push({
                 data: 'kode_petugas',
                 render: function(d) {
@@ -556,29 +569,33 @@
                         escapeHtml(statusLabel(d)) + '</span>';
                 }
             });
-            if (isSuperAdmin || isAdminSosial) cols.push({
-                data: null,
-                orderable: false,
-                searchable: false,
-                className: 'text-center',
-                render: function() {
-                    return renderActionButton('lapangan');
-                }
-            });
             return cols;
         }
 
         function entryColumns() {
             var cols = [];
-            if (isSuperAdmin || isAdminIpds) cols.push({
-                data: null,
-                orderable: false,
-                searchable: false,
-                className: 'text-center',
-                render: function(d, t, row) {
-                    return renderCheckbox(row, 'entry');
-                }
-            });
+            if (isSuperAdmin || isAdminIpds) {
+                // 1. Checkbox
+                cols.push({
+                    data: null,
+                    orderable: false,
+                    searchable: false,
+                    className: 'text-center',
+                    render: function(d, t, row) {
+                        return renderCheckbox(row, 'entry');
+                    }
+                });
+                // 2. Aksi (tombol edit) tepat setelah checkbox
+                cols.push({
+                    data: null,
+                    orderable: false,
+                    searchable: false,
+                    className: 'text-center',
+                    render: function() {
+                        return renderActionButton('entry');
+                    }
+                });
+            }
             cols.push({
                 data: 'kode_petugas',
                 render: function(d) {
@@ -606,15 +623,6 @@
                 render: function(d) {
                     return '<span class="px-2 py-1 rounded-lg bg-green-50 text-green-700 text-[10px] font-bold uppercase">' +
                         escapeHtml(statusLabel(d)) + '</span>';
-                }
-            });
-            if (isSuperAdmin || isAdminIpds) cols.push({
-                data: null,
-                orderable: false,
-                searchable: false,
-                className: 'text-center',
-                render: function() {
-                    return renderActionButton('entry');
                 }
             });
             return cols;
