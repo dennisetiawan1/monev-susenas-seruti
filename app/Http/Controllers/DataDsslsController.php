@@ -86,7 +86,7 @@ class DataDsslsController extends Controller
         $timestamp    = null;
 
         if ($state === 1) {
-            $item->$waktuField = Carbon::now();
+            $item->$waktuField = Carbon::now('Asia/Jakarta');
             $timestamp         = $item->$waktuField->format('d/m/y H:i');
         } else {
             $item->$waktuField = null;

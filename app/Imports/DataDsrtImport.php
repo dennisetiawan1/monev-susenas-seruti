@@ -30,13 +30,19 @@ class DataDsrtImport implements
         // Hanya import baris DSRT yang dsrt_ssn-nya bernilai 1.
         // Baris dengan dsrt_ssn = 0 (atau nilai selain 1) dilewati.
         // Susenas: hanya dsrt_ssn = 1. Seruti: hanya F_SERUTI = 1.
-        $flag = $this->program === 'seruti'
-            ? $this->value($row, 'f_seruti', 'F_SERUTI', 0)
-            : $this->value($row, 'dsrt_ssn', null, 0);
+        $dsrt    = (string) $this->value($row, 'dsrt_ssn', null, 0);
+        $seruti  = (string) $this->value($row, 'f_seruti', 'F_SERUTI', 0);
 
-        if ((string) $flag !== '1') {
+        // Susenas: dsrt_ssn = 1.
+        // Seruti : F_SERUTI = 1 DAN dsrt_ssn = 1.
+        $accepted = $this->program === 'seruti'
+            ? ($seruti === '1' && $dsrt === '1')
+            : ($dsrt === '1');
+
+        if (!$accepted) {
             return null;
         }
+
         // Simpan sebagai baris milik satu program saja, supaya Susenas dan Seruti berdiri sendiri.
         $row['dsrt_ssn'] = $this->program === 'seruti' ? 0 : 1;
         $row['f_seruti'] = $this->program === 'seruti' ? 1 : 0;
