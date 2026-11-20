@@ -151,7 +151,9 @@ class DataDsrtController extends Controller
 
         Cache::forget('count_data_dsrt');
 
-        return back()->with('success', 'Data DSRT berhasil diperbarui.')->with('active_tab', 'dsrt');
+        $tab = ((int) $item->F_SERUTI === 1 ? 'seruti' : 'susenas') . '-dsrt';
+
+        return back()->with('success', 'Data DSRT berhasil diperbarui.')->with('active_tab', $tab);
     }
 
     public function updateInline(Request $request)
@@ -207,17 +209,20 @@ class DataDsrtController extends Controller
         }
 
         $request->validate([
-            'ids'   => 'required|array',
-            'ids.*' => 'exists:data_dsrts,id'
+            'ids'     => 'required|array',
+            'ids.*'   => 'exists:data_dsrts,id',
+            'program' => 'required|in:susenas,seruti',
         ]);
 
-        DataDsrt::whereIn('id', $request->ids)->delete();
+        $deleted = DataDsrt::whereIn('id', $request->ids)
+            ->forProgram($request->program)
+            ->delete();
 
         Cache::forget('count_data_dsrt');
 
         return response()->json([
             'success' => true,
-            'message' => count($request->ids) . ' data berhasil dihapus'
+            'message' => $deleted . ' data berhasil dihapus',
         ]);
     }
 

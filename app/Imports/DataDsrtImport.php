@@ -37,7 +37,10 @@ class DataDsrtImport implements
         if ((string) $flag !== '1') {
             return null;
         }
-        
+        // Simpan sebagai baris milik satu program saja, supaya Susenas dan Seruti berdiri sendiri.
+        $row['dsrt_ssn'] = $this->program === 'seruti' ? 0 : 1;
+        $row['f_seruti'] = $this->program === 'seruti' ? 1 : 0;
+
         $key = $this->logicalKey($row);
         $occurrence = $this->occurrences[$key] ?? 0;
         $this->occurrences[$key] = $occurrence + 1;
